@@ -1,19 +1,14 @@
-import { getCurrentTabURL, getYoutubeVideoId } from "./utils.js";
+import { getCurrentTabURL } from "./utils.js";
 let currentVideo = "";
 // adding a new bookmark row to the popup
 const addNewBookmark = (bookmarksElement, bookmark) => {
   const bookmarkTitleElement = document.createElement("div");
   const newBookmarkElement = document.createElement("div");
   const controlsElement = document.createElement("div");
-  const preview = document.createElement("img");
 
   bookmarkTitleElement.textContent = bookmark.desc;
   bookmarkTitleElement.className = "bookmark-title";
   controlsElement.className = "bookmark-controls";
-  //#region preview
-  preview.className = "preview";
-  preview.src = `http://img.youtube.com/vi/${currentVideo}/0.jpg`;
-  //#endregion preview
 
   newBookmarkElement.id = "bookmark-" + bookmark.time;
   newBookmarkElement.className = "bookmark";
@@ -22,7 +17,6 @@ const addNewBookmark = (bookmarksElement, bookmark) => {
   setBookmarkAttributes("play", onPlay, controlsElement);
   setBookmarkAttributes("delete", onDelete, controlsElement);
 
-  newBookmarkElement.appendChild(preview);
   newBookmarkElement.appendChild(bookmarkTitleElement);
   newBookmarkElement.appendChild(controlsElement);
   bookmarksElement.appendChild(newBookmarkElement);
@@ -40,6 +34,18 @@ const viewBookmarks = (currentBookmarks = []) => {
   } else {
     bookmarksElement.innerHTML = "<i class='row'>No bookmarks to show</i>";
   }
+
+  const clearButton = document.getElementsByClassName("clear-storage")[0];
+  clearButton.addEventListener("click", () => {
+    chrome.storage.local.clear(function () {
+      let error = chrome.runtime.lastError;
+      if (error) {
+        console.error(error);
+      }
+      // do something more
+    });
+    chrome.storage.sync.clear(); // callback is optional
+  });
 };
 
 const onPlay = async (e) => {
@@ -47,28 +53,28 @@ const onPlay = async (e) => {
   const activeTab = await getCurrentTabURL();
 
   chrome.tabs.sendMessage(activeTab.id, {
-    type: "PLAY",
+    type: "PLAY_FROM_BOOKMARK",
     value: bookmarkTime,
   });
 };
 
 const onDelete = async (e) => {
   const bookmarkTime = e.target.parentNode.parentNode.getAttribute("timestamp");
-  const activeTab = await getCurrentTabURL();
+  // const activeTab = await getCurrentTabURL();
+  let activeTab;
+  chrome.tabs.query({ currentWindow: true, active: true }, function (tabs) {
+    activeTab = tabs[0];
+    console.log(bookmarkTime);
+    chrome.tabs.sendMessage(activeTab.id, {
+      type: "DELETE_BOOKMARK",
+      value: bookmarkTime,
+    });
+  });
 
   const bookmarkElementToDelete = document.getElementById(
     `bookmark-${bookmarkTime}`
   );
   bookmarkElementToDelete.parentNode.removeChild(bookmarkElementToDelete);
-
-  chrome.tabs.sendMessage(
-    activeTab.id,
-    {
-      type: "DELETE",
-      value: bookmarkTime,
-    },
-    viewBookmarks
-  );
 };
 
 const setBookmarkAttributes = (src, eventListener, controlParentElement) => {

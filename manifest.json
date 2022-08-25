@@ -10,7 +10,8 @@
   "content_scripts": [
     {
       "matches": ["https://*.youtube.com/*"],
-      "js": ["contentScript.js"]
+      "js": ["contentScript.js"],
+      "css": ["contentStyles.css"]
     }
   ],
   "web_accessible_resources": [
@@ -19,7 +20,8 @@
         "assets/book.png",
         "assets/play.png",
         "assets/delete.png",
-        "assets/save.png"
+        "assets/save.png",
+        "assets/bookmark-item.png"
       ],
       "matches": ["https://*.youtube.com/*"]
     }
