@@ -10,7 +10,7 @@
 }
 
 .buttons-container {
-    /* background-color: cyan; */
+    background-color: rgba(0,0,0 , 0.8);
     height: 45%;
     display: flex;
     justify-content: center;
