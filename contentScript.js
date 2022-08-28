@@ -1,8 +1,8 @@
 let controlsContainer = null;
 let bookmarksContainer = null;
+let youtubePlayer;
 
 (() => {
-  let youtubePlayer;
   let currentVideo = "";
   let currentVideoBookmarks = [];
   let youtubeBottomContainer;
@@ -34,16 +34,18 @@ let bookmarksContainer = null;
   };
 
   const newVideoLoaded = async () => {
+    youtubePlayer = document.getElementsByClassName("video-stream")[0];
+    youtubePlayer.addEventListener("ready", () => {
+      console.log("video os loaded! duration is: ", youtubePlayer.duration);
+    });
+
     currentVideoBookmarks = await fetchBookmarks();
-    console.table(currentVideoBookmarks);
     if (bookmarksContainer) bookmarksContainer.innerHTML = "";
     youtubeBottomContainer =
       document.getElementsByClassName("ytp-chrome-bottom")[0];
     controlsContainerIsExist = document.getElementsByClassName(
       "bookmark-controls-container"
     )[0];
-
-    youtubePlayer = document.getElementsByClassName("video-stream")[0];
 
     if (!controlsContainerIsExist) {
       controlsContainer = document.createElement("div");
@@ -55,9 +57,6 @@ let bookmarksContainer = null;
       bookmarksContainer = document.createElement("div");
       bookmarksContainer.className = "bookmarks-container";
       bookmarksContainer.innerHTML = "";
-      currentVideoBookmarks.forEach((element) => {
-        createAndAppendBookmark(element.time);
-      });
 
       const bookmarksBottom = document.createElement("div");
       bookmarksBottom.className = "bookmark-controls-container-bottom";
@@ -75,11 +74,11 @@ let bookmarksContainer = null;
       buttonsContainer.prepend(bookmarkBtn);
       youtubeBottomContainer.prepend(controlsContainer);
       bookmarkBtn.addEventListener("click", addNewBookmarkEventHandler);
-    } else {
-      currentVideoBookmarks.forEach((element) => {
-        createAndAppendBookmark(element.time);
-      });
     }
+    generateAllBookmarks();
+    // currentVideoBookmarks.forEach((element) => {
+    //   createAndAppendBookmark(element.time);
+    // });
   };
 
   const playVideoAtBookmark = (time) => {
@@ -99,11 +98,25 @@ let bookmarksContainer = null;
     chrome.storage.sync.set({
       [currentVideo]: JSON.stringify(currentVideoBookmarks),
     });
-    createAndAppendBookmark(currentTime);
+    bookmarksContainer.appendChild(createBookmark(currentTime));
   };
 
-  function createAndAppendBookmark(time) {
+  function generateAllBookmarks() {
     const videoDuration = getVideoDuration();
+    if (videoDuration > 0) {
+      currentVideoBookmarks.forEach((element) => {
+        bookmarksContainer.appendChild(createBookmark(element.time));
+      });
+    } else {
+      setTimeout(() => {
+        generateAllBookmarks();
+      }, 500);
+    }
+  }
+
+  function createBookmark(time) {
+    const videoDuration = getVideoDuration();
+    console.log(youtubePlayer, youtubePlayer.duration);
     const bookmarkItem = document.createElement("img");
     bookmarkItem.className = "bookmark-item";
     bookmarkItem.id = "bookmark_" + time;
@@ -112,8 +125,8 @@ let bookmarksContainer = null;
     bookmarkItem.addEventListener("click", () => {
       playVideoAtBookmark(time);
     });
-
-    bookmarksContainer.appendChild(bookmarkItem);
+    return bookmarkItem;
+    // bookmarksContainer.appendChild(bookmarkItem);
   }
 
   function getVideoDuration() {

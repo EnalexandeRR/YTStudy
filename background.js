@@ -18,8 +18,18 @@ chrome.webNavigation.onCompleted.addListener((tab) => {
       videoId: urlParameters.get("v"),
     });
     console.log("TAB UPDATED");
+    console.table(getFromStorage(urlParameters.get("v")));
   }
 });
+
+function getFromStorage(videoId) {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get([videoId], (obj) => {
+      resolve(obj[videoId] ? JSON.parse(obj[videoId]) : []);
+    });
+  });
+}
+
 // chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
 //   if (
 //     changeInfo.status == "complete" &&

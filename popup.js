@@ -15,7 +15,6 @@ const addNewBookmark = (bookmarksElement, bookmark) => {
   newBookmarkElement.setAttribute("timestamp", bookmark.time);
 
   setBookmarkAttributes("play", onPlay, controlsElement);
-  setBookmarkAttributes("play", sendMessageToContent, controlsElement);
   setBookmarkAttributes("delete", onDelete, controlsElement);
 
   newBookmarkElement.appendChild(bookmarkTitleElement);
