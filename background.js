@@ -1,3 +1,4 @@
+//ON URL CHANGE EVENT
 chrome.tabs.onUpdated.addListener(function onUpdate(tabId, tab) {
   if (tab.url && tab.url.includes("youtube.com/watch")) {
     const queryParameters = tab.url.split("?")[1];
@@ -9,6 +10,7 @@ chrome.tabs.onUpdated.addListener(function onUpdate(tabId, tab) {
     console.log("URL UPDATED!");
   }
 });
+//ON PAGE LOAD/RELOAD
 chrome.webNavigation.onCompleted.addListener((tab) => {
   if (tab.frameId === 0 && tab.url.includes("youtube.com/watch")) {
     const queryParameters = tab.url.split("?")[1];
@@ -18,7 +20,6 @@ chrome.webNavigation.onCompleted.addListener((tab) => {
       videoId: urlParameters.get("v"),
     });
     console.log("TAB UPDATED");
-    console.table(getFromStorage(urlParameters.get("v")));
   }
 });
 

@@ -1,6 +1,8 @@
 let controlsContainer = null;
 let bookmarksContainer = null;
 let youtubePlayer;
+let wasPlayingAd = false;
+let adCheckInterval = null;
 
 (() => {
   let currentVideo = "";
@@ -34,18 +36,22 @@ let youtubePlayer;
   };
 
   const newVideoLoaded = async () => {
-    youtubePlayer = document.getElementsByClassName("video-stream")[0];
-    youtubePlayer.addEventListener("ready", () => {
-      console.log("video os loaded! duration is: ", youtubePlayer.duration);
-    });
-
     currentVideoBookmarks = await fetchBookmarks();
+    youtubePlayer = document.getElementsByClassName("video-stream")[0];
+
     if (bookmarksContainer) bookmarksContainer.innerHTML = "";
-    youtubeBottomContainer =
-      document.getElementsByClassName("ytp-chrome-bottom")[0];
-    controlsContainerIsExist = document.getElementsByClassName(
-      "bookmark-controls-container"
-    )[0];
+    youtubeBottomContainer = document.getElementsByClassName("ytp-chrome-bottom")[0];
+    controlsContainerIsExist = document.getElementsByClassName("bookmark-controls-container")[0];
+
+    //Ads check
+    adCheckInterval = setInterval(adChecker, 500);
+    youtubePlayer.addEventListener("playing", function () {
+      if (adCheckInterval === null) {
+        adCheckInterval = setInterval(adChecker, 500);
+      }
+    });
+    youtubePlayer.addEventListener("ended", clearAdCheckerInterval);
+    youtubePlayer.addEventListener("pause", clearAdCheckerInterval);
 
     if (!controlsContainerIsExist) {
       controlsContainer = document.createElement("div");
@@ -75,10 +81,11 @@ let youtubePlayer;
       youtubeBottomContainer.prepend(controlsContainer);
       bookmarkBtn.addEventListener("click", addNewBookmarkEventHandler);
     }
-    generateAllBookmarks();
-    // currentVideoBookmarks.forEach((element) => {
-    //   createAndAppendBookmark(element.time);
-    // });
+
+    //TODO: how to callback to wait until ads is over
+    if (!isPlayingAd) {
+      generateAllBookmarks();
+    }
   };
 
   const playVideoAtBookmark = (time) => {
@@ -105,7 +112,7 @@ let youtubePlayer;
     const videoDuration = getVideoDuration();
     if (videoDuration > 0) {
       currentVideoBookmarks.forEach((element) => {
-        bookmarksContainer.appendChild(createBookmark(element.time));
+        bookmarksContainer.appendChild(createBookmark(element.time, videoDuration));
       });
     } else {
       setTimeout(() => {
@@ -114,8 +121,8 @@ let youtubePlayer;
     }
   }
 
-  function createBookmark(time) {
-    const videoDuration = getVideoDuration();
+  function createBookmark(time, videoDuration) {
+    // const videoDuration = getVideoDuration();
     console.log(youtubePlayer, youtubePlayer.duration);
     const bookmarkItem = document.createElement("img");
     bookmarkItem.className = "bookmark-item";
@@ -126,7 +133,6 @@ let youtubePlayer;
       playVideoAtBookmark(time);
     });
     return bookmarkItem;
-    // bookmarksContainer.appendChild(bookmarkItem);
   }
 
   function getVideoDuration() {
@@ -148,19 +154,47 @@ let youtubePlayer;
   }
 
   function jumpToTimeInPlayer(time) {
-    youtubePlayer.currentTime = time;
+    if (!isPlayingAd()) {
+      youtubePlayer.currentTime = time;
+    }
   }
 
   function deleteBookmark(timeStamp) {
-    currentVideoBookmarks = currentVideoBookmarks.filter(
-      (b) => b.time != timeStamp
-    );
+    currentVideoBookmarks = currentVideoBookmarks.filter((b) => b.time != timeStamp);
     let deletedBookmark = document.getElementById("bookmark_" + timeStamp);
     deletedBookmark.remove();
     currentVideoBookmarks.sort((a, b) => a.time - b.time);
     chrome.storage.sync.set({
       [currentVideo]: JSON.stringify(currentVideoBookmarks),
     });
+  }
+  function adChecker() {
+    if (isPlayingAd()) {
+      toggleBookmarkPanel(false);
+      wasPlayingAd = true;
+    } else {
+      if (wasPlayingAd) {
+        removePrevBookmarks();
+        toggleBookmarkPanel(true);
+        wasPlayingAd = false;
+      }
+    }
+    console.log("IS ADS? _" + isPlayingAd());
+  }
+  /* Check if ad is playing */
+  function isPlayingAd() {
+    const adOverlay = document.getElementsByClassName("ytp-ad-player-overlay")[0];
+    return !!adOverlay;
+  }
+
+  /* clear ad checker interval script */
+  function clearAdCheckerInterval() {
+    clearInterval(adCheckInterval);
+    adCheckInterval = null;
+  }
+
+  function toggleBookmarkPanel(display) {
+    display ? controlsContainer.className.remove("hidden") : controlsContainer.className.add("hidden");
   }
 })();
 
@@ -173,3 +207,15 @@ const getTime = (t) => {
 function everyTimePageLoads() {}
 
 function initializePlayerControls() {}
+
+//HERE IS THE CODE FROM THAT EXTENTION!
+
+ytPlayer.addEventListener("playing", function () {
+  if (adCheckInterval === null) {
+    adCheckInterval = setInterval(adChecker, 1000);
+  }
+});
+
+// clear ad checker interval script when video is paused or has ended
+ytPlayer.addEventListener("ended", clearAdCheckerInterval);
+ytPlayer.addEventListener("pause", clearAdCheckerInterval);
