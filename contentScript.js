@@ -90,7 +90,7 @@ const minBookmarkInterval = 1;
     youtubePlayer.currentTime = time;
   };
 
-  const addNewBookmarkEventHandler = async () => {
+  const addNewBookmarkEventHandler = () => {
     const currentTime = youtubePlayer.currentTime;
     let canPlace = true;
     for (let i = 0; i < currentVideoBookmarks.length; i++) {
@@ -112,6 +112,27 @@ const minBookmarkInterval = 1;
       chrome.storage.sync.set({
         [currentVideo]: JSON.stringify(currentVideoBookmarks),
       });
+    }
+  };
+
+  const nextBookmarkEventHandler = () => {
+    const currentTime = youtubePlayer.currentTime;
+    for (let i = 0; i < currentVideoBookmarks.length; i++) {
+      const element = currentVideoBookmarks[i];
+      if (element.time > currentTime) {
+        youtubePlayer.currentTime = element.time;
+        break;
+      }
+    }
+  };
+  const prevBookmarkEventHandler = () => {
+    const currentTime = youtubePlayer.currentTime;
+    for (let i = currentVideoBookmarks.length - 1; i >= 0; i--) {
+      const element = currentVideoBookmarks[i];
+      if (element.time < currentTime - 0.9) {
+        youtubePlayer.currentTime = element.time;
+        break;
+      }
     }
   };
 
@@ -215,6 +236,7 @@ const minBookmarkInterval = 1;
     nextBookmarkBtn.src = chrome.runtime.getURL("assets/b-next.png");
     nextBookmarkBtn.className = "bookmark-button";
     nextBookmarkBtn.title = "Go to next bookmark";
+    nextBookmarkBtn.addEventListener("click", nextBookmarkEventHandler);
     return nextBookmarkBtn;
   }
   function createPrevBookmarkButton() {
@@ -222,6 +244,7 @@ const minBookmarkInterval = 1;
     nextBookmarkBtn.src = chrome.runtime.getURL("assets/b-prev.png");
     nextBookmarkBtn.className = "bookmark-button";
     nextBookmarkBtn.title = "Go to previous bookmark";
+    nextBookmarkBtn.addEventListener("click", prevBookmarkEventHandler);
     return nextBookmarkBtn;
   }
 })();
