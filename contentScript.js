@@ -3,6 +3,7 @@ let bookmarksContainer = null;
 let youtubePlayer;
 let wasPlayingAd = false;
 let adCheckInterval = null;
+const minBookmarkInterval = 1;
 
 (() => {
   let currentVideo = "";
@@ -42,16 +43,17 @@ let adCheckInterval = null;
     if (bookmarksContainer) bookmarksContainer.innerHTML = "";
     youtubeBottomContainer = document.getElementsByClassName("ytp-chrome-bottom")[0];
     controlsContainerIsExist = document.getElementsByClassName("bookmark-controls-container")[0];
-
+    //#region ADS check, make later
     //Ads check
-    adCheckInterval = setInterval(adChecker, 500);
-    youtubePlayer.addEventListener("playing", function () {
-      if (adCheckInterval === null) {
-        adCheckInterval = setInterval(adChecker, 500);
-      }
-    });
-    youtubePlayer.addEventListener("ended", clearAdCheckerInterval);
-    youtubePlayer.addEventListener("pause", clearAdCheckerInterval);
+    // adCheckInterval = setInterval(adChecker, 500);
+    // youtubePlayer.addEventListener("playing", function () {
+    //   if (adCheckInterval === null) {
+    //     adCheckInterval = setInterval(adChecker, 500);
+    //   }
+    // });
+    // youtubePlayer.addEventListener("ended", clearAdCheckerInterval);
+    // youtubePlayer.addEventListener("pause", clearAdCheckerInterval);
+    //#endregion
 
     if (!controlsContainerIsExist) {
       controlsContainer = document.createElement("div");
@@ -76,7 +78,6 @@ let adCheckInterval = null;
       buttonsContainer.append(createNextBookmarkButton());
 
       youtubeBottomContainer.prepend(controlsContainer);
-      bookmarkBtn.addEventListener("click", addNewBookmarkEventHandler);
     }
 
     generateAllBookmarks();
@@ -90,19 +91,28 @@ let adCheckInterval = null;
   };
 
   const addNewBookmarkEventHandler = async () => {
-    const currentTime = Math.floor(youtubePlayer.currentTime);
-    console.log(currentTime);
-    const newBookmark = {
-      time: currentTime,
-      desc: "Bookmark at " + getTime(currentTime),
-    };
+    const currentTime = youtubePlayer.currentTime;
+    let canPlace = true;
+    for (let i = 0; i < currentVideoBookmarks.length; i++) {
+      if (currentTime >= currentVideoBookmarks[i].time - minBookmarkInterval && currentTime <= currentVideoBookmarks[i].time + minBookmarkInterval) {
+        canPlace = false;
+        break;
+      }
+    }
 
-    currentVideoBookmarks.push(newBookmark);
-    currentVideoBookmarks.sort((a, b) => a.time - b.time);
-    chrome.storage.sync.set({
-      [currentVideo]: JSON.stringify(currentVideoBookmarks),
-    });
-    bookmarksContainer.appendChild(createBookmark(currentTime));
+    if (canPlace) {
+      const newBookmark = {
+        time: currentTime,
+        desc: "Bookmark at " + getTime(currentTime),
+      };
+      currentVideoBookmarks.push(newBookmark);
+      currentVideoBookmarks.sort((a, b) => a.time - b.time);
+      bookmarksContainer.appendChild(createBookmark(currentTime));
+
+      chrome.storage.sync.set({
+        [currentVideo]: JSON.stringify(currentVideoBookmarks),
+      });
+    }
   };
 
   function generateAllBookmarks() {
@@ -118,9 +128,8 @@ let adCheckInterval = null;
     }
   }
 
-  function createBookmark(time, videoDuration) {
-    // const videoDuration = getVideoDuration();
-    console.log(youtubePlayer, youtubePlayer.duration);
+  function createBookmark(time) {
+    const videoDuration = getVideoDuration();
     const bookmarkItem = document.createElement("img");
     bookmarkItem.className = "bookmark-item";
     bookmarkItem.id = "bookmark_" + time;
@@ -193,6 +202,28 @@ let adCheckInterval = null;
   function toggleBookmarkPanel(display) {
     display ? controlsContainer.className.remove("hidden") : controlsContainer.className.add("hidden");
   }
+  function createAddBookmarkButton() {
+    const bookmarkBtn = document.createElement("img");
+    bookmarkBtn.src = chrome.runtime.getURL("assets/book.png");
+    bookmarkBtn.className = "bookmark-button";
+    bookmarkBtn.title = "Click to bookmark current timestamp";
+    bookmarkBtn.addEventListener("click", addNewBookmarkEventHandler);
+    return bookmarkBtn;
+  }
+  function createNextBookmarkButton() {
+    const nextBookmarkBtn = document.createElement("img");
+    nextBookmarkBtn.src = chrome.runtime.getURL("assets/b-next.png");
+    nextBookmarkBtn.className = "bookmark-button";
+    nextBookmarkBtn.title = "Go to next bookmark";
+    return nextBookmarkBtn;
+  }
+  function createPrevBookmarkButton() {
+    const nextBookmarkBtn = document.createElement("img");
+    nextBookmarkBtn.src = chrome.runtime.getURL("assets/b-prev.png");
+    nextBookmarkBtn.className = "bookmark-button";
+    nextBookmarkBtn.title = "Go to previous bookmark";
+    return nextBookmarkBtn;
+  }
 })();
 
 const getTime = (t) => {
@@ -205,30 +236,6 @@ function everyTimePageLoads() {}
 
 function initializePlayerControls() {}
 
-function createAddBookmarkButton() {
-  const bookmarkBtn = document.createElement("img");
-  bookmarkBtn.src = chrome.runtime.getURL("assets/book.png");
-  bookmarkBtn.className = "bookmark-button";
-  bookmarkBtn.title = "Click to bookmark current timestamp";
-  return bookmarkBtn;
-}
-
-function createNextBookmarkButton() {
-  const nextBookmarkBtn = document.createElement("img");
-  nextBookmarkBtn.src = chrome.runtime.getURL("assets/b-next.png");
-  nextBookmarkBtn.className = "bookmark-button";
-  nextBookmarkBtn.title = "Go to next bookmark";
-  return nextBookmarkBtn;
-}
-
-function createPrevBookmarkButton() {
-  const nextBookmarkBtn = document.createElement("img");
-  nextBookmarkBtn.src = chrome.runtime.getURL("assets/b-prev.png");
-  nextBookmarkBtn.className = "bookmark-button";
-  nextBookmarkBtn.title = "Go to previous bookmark";
-  return nextBookmarkBtn;
-}
-
 // clear ad checker interval script when video is paused or has ended
-ytPlayer.addEventListener("ended", clearAdCheckerInterval);
-ytPlayer.addEventListener("pause", clearAdCheckerInterval);
+// ytPlayer.addEventListener("ended", clearAdCheckerInterval);
+// ytPlayer.addEventListener("pause", clearAdCheckerInterval);
