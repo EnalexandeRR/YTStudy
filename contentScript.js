@@ -71,21 +71,18 @@ let adCheckInterval = null;
       controlsContainer.appendChild(bookmarksContainer);
       controlsContainer.appendChild(bookmarksBottom);
 
-      const bookmarkBtn = document.createElement("img");
+      buttonsContainer.append(createAddBookmarkButton());
+      buttonsContainer.append(createPrevBookmarkButton());
+      buttonsContainer.append(createNextBookmarkButton());
 
-      bookmarkBtn.src = chrome.runtime.getURL("assets/book.png");
-      bookmarkBtn.className = "bookmark-button";
-      bookmarkBtn.title = "Click to bookmark current timestamp";
-
-      buttonsContainer.prepend(bookmarkBtn);
       youtubeBottomContainer.prepend(controlsContainer);
       bookmarkBtn.addEventListener("click", addNewBookmarkEventHandler);
     }
 
+    generateAllBookmarks();
     //TODO: how to callback to wait until ads is over
-    if (!isPlayingAd) {
-      generateAllBookmarks();
-    }
+    // if (!isPlayingAd) {
+    // }
   };
 
   const playVideoAtBookmark = (time) => {
@@ -208,13 +205,29 @@ function everyTimePageLoads() {}
 
 function initializePlayerControls() {}
 
-//HERE IS THE CODE FROM THAT EXTENTION!
+function createAddBookmarkButton() {
+  const bookmarkBtn = document.createElement("img");
+  bookmarkBtn.src = chrome.runtime.getURL("assets/book.png");
+  bookmarkBtn.className = "bookmark-button";
+  bookmarkBtn.title = "Click to bookmark current timestamp";
+  return bookmarkBtn;
+}
 
-ytPlayer.addEventListener("playing", function () {
-  if (adCheckInterval === null) {
-    adCheckInterval = setInterval(adChecker, 1000);
-  }
-});
+function createNextBookmarkButton() {
+  const nextBookmarkBtn = document.createElement("img");
+  nextBookmarkBtn.src = chrome.runtime.getURL("assets/b-next.png");
+  nextBookmarkBtn.className = "bookmark-button";
+  nextBookmarkBtn.title = "Go to next bookmark";
+  return nextBookmarkBtn;
+}
+
+function createPrevBookmarkButton() {
+  const nextBookmarkBtn = document.createElement("img");
+  nextBookmarkBtn.src = chrome.runtime.getURL("assets/b-prev.png");
+  nextBookmarkBtn.className = "bookmark-button";
+  nextBookmarkBtn.title = "Go to previous bookmark";
+  return nextBookmarkBtn;
+}
 
 // clear ad checker interval script when video is paused or has ended
 ytPlayer.addEventListener("ended", clearAdCheckerInterval);

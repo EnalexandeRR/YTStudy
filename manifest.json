@@ -18,6 +18,8 @@
     {
       "resources": [
         "assets/book.png",
+        "assets/b-prev.png",
+        "assets/b-next.png",
         "assets/play.png",
         "assets/delete.png",
         "assets/save.png",
