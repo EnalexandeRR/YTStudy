@@ -4,6 +4,7 @@ let youtubePlayer;
 let wasPlayingAd = false;
 let adCheckInterval = null;
 const minBookmarkInterval = 1;
+let video = null;
 
 (() => {
   let currentVideo = "";
@@ -76,6 +77,7 @@ const minBookmarkInterval = 1;
       buttonsContainer.append(createAddBookmarkButton());
       buttonsContainer.append(createPrevBookmarkButton());
       buttonsContainer.append(createNextBookmarkButton());
+      buttonsContainer.append(createLoopButton());
 
       youtubeBottomContainer.prepend(controlsContainer);
     }
@@ -89,7 +91,7 @@ const minBookmarkInterval = 1;
   const playVideoAtBookmark = (time) => {
     youtubePlayer.currentTime = time;
   };
-
+  //#region CONTROL BUTTONS EVENT HADLERS
   const addNewBookmarkEventHandler = () => {
     const currentTime = youtubePlayer.currentTime;
     let canPlace = true;
@@ -107,15 +109,14 @@ const minBookmarkInterval = 1;
       };
       currentVideoBookmarks.push(newBookmark);
       currentVideoBookmarks.sort((a, b) => a.time - b.time);
-      bookmarksContainer.appendChild(createBookmark(currentTime));
+      bookmarksContainer.appendChild(createBookmark(currentTime, newBookmark.desc));
 
       chrome.storage.sync.set({
         [currentVideo]: JSON.stringify(currentVideoBookmarks),
       });
     }
   };
-
-  const nextBookmarkEventHandler = () => {
+  const nextBookmarkEventHandler = async () => {
     const currentTime = youtubePlayer.currentTime;
     for (let i = 0; i < currentVideoBookmarks.length; i++) {
       const element = currentVideoBookmarks[i];
@@ -125,7 +126,7 @@ const minBookmarkInterval = 1;
       }
     }
   };
-  const prevBookmarkEventHandler = () => {
+  const prevBookmarkEventHandler = async () => {
     const currentTime = youtubePlayer.currentTime;
     for (let i = currentVideoBookmarks.length - 1; i >= 0; i--) {
       const element = currentVideoBookmarks[i];
@@ -135,12 +136,18 @@ const minBookmarkInterval = 1;
       }
     }
   };
+  const loopBtnClickEventHandler = () => {
+    if (!youtubePlayer.paused) youtubePlayer.pause();
+    showLoopSelectionOverlay();
+  };
+
+  //#endregion
 
   function generateAllBookmarks() {
     const videoDuration = getVideoDuration();
     if (videoDuration > 0) {
       currentVideoBookmarks.forEach((element) => {
-        bookmarksContainer.appendChild(createBookmark(element.time, videoDuration));
+        bookmarksContainer.appendChild(createBookmark(element.time, element.desc));
       });
     } else {
       setTimeout(() => {
@@ -149,13 +156,14 @@ const minBookmarkInterval = 1;
     }
   }
 
-  function createBookmark(time) {
+  function createBookmark(time, description) {
     const videoDuration = getVideoDuration();
     const bookmarkItem = document.createElement("img");
     bookmarkItem.className = "bookmark-item";
     bookmarkItem.id = "bookmark_" + time;
     bookmarkItem.style.left = `calc(${(time / videoDuration) * 100}% - 3px)`;
     bookmarkItem.src = chrome.runtime.getURL("assets/bookmark-item.png");
+    bookmarkItem.title = `${description}`;
     bookmarkItem.addEventListener("click", () => {
       playVideoAtBookmark(time);
     });
@@ -170,13 +178,35 @@ const minBookmarkInterval = 1;
     return null;
   }
 
-  function showPlayerOverlay() {
+  function showLoopSelectionOverlay() {
+    const body = document.querySelector("body");
+    body.classList.add("body-no-scroll");
+
     const playerOverlayParent = document.querySelector("ytd-app");
     const playerOverlay = document.createElement("div");
     playerOverlay.className = "player-overlay";
     playerOverlayParent.prepend(playerOverlay);
-    playerOverlay.addEventListener("click", () => {
+    playerOverlay.innerHTML = `
+    <div class="modal-window">
+      <div class="modal-header">
+      </div>
+      <div class="modal-main">
+        <ul class="bookmarks-list">
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <input type="button" value="Close!" class="close-button">
+      </div>
+    </div>`;
+    console.log(currentVideoBookmarks);
+    const sectionUl = document.querySelector(".bookmarks-list");
+    for (let i = 0; i < currentVideoBookmarks.length; i++) {
+      sectionUl.append(createBookmarkListItem(currentVideoBookmarks[0]));
+    }
+
+    document.querySelector(".close-button").addEventListener("click", () => {
       playerOverlay.classList.add("hidden");
+      body.classList.remove("body-no-scroll");
     });
   }
 
@@ -195,6 +225,7 @@ const minBookmarkInterval = 1;
       [currentVideo]: JSON.stringify(currentVideoBookmarks),
     });
   }
+  //#region ADS FUNCTIONS
   function adChecker() {
     if (isPlayingAd()) {
       toggleBookmarkPanel(false);
@@ -219,33 +250,10 @@ const minBookmarkInterval = 1;
     clearInterval(adCheckInterval);
     adCheckInterval = null;
   }
+  //#endregion
 
   function toggleBookmarkPanel(display) {
     display ? controlsContainer.className.remove("hidden") : controlsContainer.className.add("hidden");
-  }
-  function createAddBookmarkButton() {
-    const bookmarkBtn = document.createElement("img");
-    bookmarkBtn.src = chrome.runtime.getURL("assets/book.png");
-    bookmarkBtn.className = "bookmark-button";
-    bookmarkBtn.title = "Click to bookmark current timestamp";
-    bookmarkBtn.addEventListener("click", addNewBookmarkEventHandler);
-    return bookmarkBtn;
-  }
-  function createNextBookmarkButton() {
-    const nextBookmarkBtn = document.createElement("img");
-    nextBookmarkBtn.src = chrome.runtime.getURL("assets/b-next.png");
-    nextBookmarkBtn.className = "bookmark-button";
-    nextBookmarkBtn.title = "Go to next bookmark";
-    nextBookmarkBtn.addEventListener("click", nextBookmarkEventHandler);
-    return nextBookmarkBtn;
-  }
-  function createPrevBookmarkButton() {
-    const nextBookmarkBtn = document.createElement("img");
-    nextBookmarkBtn.src = chrome.runtime.getURL("assets/b-prev.png");
-    nextBookmarkBtn.className = "bookmark-button";
-    nextBookmarkBtn.title = "Go to previous bookmark";
-    nextBookmarkBtn.addEventListener("click", prevBookmarkEventHandler);
-    return nextBookmarkBtn;
   }
 })();
 
@@ -259,6 +267,47 @@ function everyTimePageLoads() {}
 
 function initializePlayerControls() {}
 
-// clear ad checker interval script when video is paused or has ended
-// ytPlayer.addEventListener("ended", clearAdCheckerInterval);
-// ytPlayer.addEventListener("pause", clearAdCheckerInterval);
+function createBookmarkListItem(bookmarksParameters) {
+  const listItem = document.createElement("div");
+  listItem.className = "loop-list-item";
+  listItem.innerHTML = `
+    <input type="checkbox" name="" id="">
+    <p>${bookmarksParameters.time}<p>
+    <p>${bookmarksParameters.desc}<p>
+    `;
+  return listItem;
+}
+//#region CONTROL BUTTONS CREATION
+function createAddBookmarkButton() {
+  const bookmarkBtn = document.createElement("img");
+  bookmarkBtn.src = chrome.runtime.getURL("assets/book.png");
+  bookmarkBtn.className = "bookmark-button";
+  bookmarkBtn.title = "Add bookmark at current time";
+  bookmarkBtn.addEventListener("click", addNewBookmarkEventHandler);
+  return bookmarkBtn;
+}
+function createNextBookmarkButton() {
+  const nextBookmarkBtn = document.createElement("img");
+  nextBookmarkBtn.src = chrome.runtime.getURL("assets/b-next.png");
+  nextBookmarkBtn.className = "bookmark-button";
+  nextBookmarkBtn.title = "Go to next bookmark";
+  nextBookmarkBtn.addEventListener("click", nextBookmarkEventHandler);
+  return nextBookmarkBtn;
+}
+function createPrevBookmarkButton() {
+  const nextBookmarkBtn = document.createElement("img");
+  nextBookmarkBtn.src = chrome.runtime.getURL("assets/b-prev.png");
+  nextBookmarkBtn.className = "bookmark-button";
+  nextBookmarkBtn.title = "Go to previous bookmark";
+  nextBookmarkBtn.addEventListener("click", prevBookmarkEventHandler);
+  return nextBookmarkBtn;
+}
+function createLoopButton() {
+  const loopBtn = document.createElement("img");
+  loopBtn.src = chrome.runtime.getURL("assets/loop-icon.png");
+  loopBtn.className = "bookmark-button";
+  loopBtn.title = "Loop between two bookmarks";
+  loopBtn.addEventListener("click", loopBtnClickEventHandler);
+  return loopBtn;
+}
+//#endregion
