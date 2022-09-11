@@ -37,6 +37,16 @@ let video = null;
     });
   };
 
+  // const fetchBookmarks = () => {
+  //   return new Promise((resolve) => {
+  //     chrome.storage.sync.get(null, (items) => {
+  //       let allKeys = Object.keys(items);
+  //       console.log(allKeys);
+  //       // resolve(obj[currentVideo] ? JSON.parse(obj[currentVideo]) : []);
+  //     });
+  //   });
+  // };
+
   const newVideoLoaded = async () => {
     currentVideoBookmarks = await fetchBookmarks();
     youtubePlayer = document.getElementsByClassName("video-stream")[0];
@@ -78,6 +88,7 @@ let video = null;
       buttonsContainer.append(createPrevBookmarkButton());
       buttonsContainer.append(createNextBookmarkButton());
       buttonsContainer.append(createLoopButton());
+      buttonsContainer.append(createEditBookmarkButton());
 
       youtubeBottomContainer.prepend(controlsContainer);
     }
@@ -141,6 +152,8 @@ let video = null;
     showLoopSelectionOverlay();
   };
 
+  const editBookmarkButtonEventHandler = () => {};
+
   //#endregion
 
   function generateAllBookmarks() {
@@ -179,11 +192,15 @@ let video = null;
   }
 
   function showLoopSelectionOverlay() {
-    const body = document.querySelector("body");
-    body.classList.add("body-no-scroll");
-
     const playerOverlayParent = document.querySelector("ytd-app");
-    const playerOverlay = document.createElement("div");
+    const body = document.querySelector("body");
+    let playerOverlay = null;
+
+    body.classList.add("body-no-scroll");
+    playerOverlay = document.querySelector(".player-overlay");
+    if (!playerOverlay) {
+      playerOverlay = document.createElement("div");
+    }
     playerOverlay.className = "player-overlay";
     playerOverlayParent.prepend(playerOverlay);
     playerOverlay.innerHTML = `
@@ -201,7 +218,7 @@ let video = null;
     console.log(currentVideoBookmarks);
     const sectionUl = document.querySelector(".bookmarks-list");
     for (let i = 0; i < currentVideoBookmarks.length; i++) {
-      sectionUl.append(createBookmarkListItem(currentVideoBookmarks[0]));
+      sectionUl.append(createBookmarkListItem(currentVideoBookmarks[i]));
     }
 
     document.querySelector(".close-button").addEventListener("click", () => {
@@ -255,6 +272,61 @@ let video = null;
   function toggleBookmarkPanel(display) {
     display ? controlsContainer.className.remove("hidden") : controlsContainer.className.add("hidden");
   }
+
+  function createBookmarkListItem(bookmarksParameters) {
+    const listItem = document.createElement("div");
+    listItem.className = "loop-list-item";
+    listItem.innerHTML = `
+      <input type="checkbox" name="" id="">
+      <p>${bookmarksParameters.time}<p>
+      <p>${bookmarksParameters.desc}<p>
+      `;
+    return listItem;
+  }
+  //#region CONTROL BUTTONS CREATION
+  function createAddBookmarkButton() {
+    const bookmarkBtn = document.createElement("img");
+    bookmarkBtn.src = chrome.runtime.getURL("assets/book.png");
+    bookmarkBtn.className = "bookmark-button";
+    bookmarkBtn.title = "Add bookmark at current time";
+    bookmarkBtn.addEventListener("click", addNewBookmarkEventHandler);
+    return bookmarkBtn;
+  }
+  function createNextBookmarkButton() {
+    const nextBookmarkBtn = document.createElement("img");
+    nextBookmarkBtn.src = chrome.runtime.getURL("assets/b-next.png");
+    nextBookmarkBtn.className = "bookmark-button";
+    nextBookmarkBtn.title = "Go to next bookmark";
+    nextBookmarkBtn.addEventListener("click", nextBookmarkEventHandler);
+    return nextBookmarkBtn;
+  }
+  function createPrevBookmarkButton() {
+    const nextBookmarkBtn = document.createElement("img");
+    nextBookmarkBtn.src = chrome.runtime.getURL("assets/b-prev.png");
+    nextBookmarkBtn.className = "bookmark-button";
+    nextBookmarkBtn.title = "Go to previous bookmark";
+    nextBookmarkBtn.addEventListener("click", prevBookmarkEventHandler);
+    return nextBookmarkBtn;
+  }
+  function createLoopButton() {
+    const loopBtn = document.createElement("img");
+    loopBtn.src = chrome.runtime.getURL("assets/loop-icon.png");
+    loopBtn.className = "bookmark-button";
+    loopBtn.title = "Loop between two bookmarks";
+    loopBtn.addEventListener("click", loopBtnClickEventHandler);
+    return loopBtn;
+  }
+
+  function createEditBookmarkButton() {
+    const editBtn = document.createElement("img");
+    editBtn.src = chrome.runtime.getURL("assets/bm-edit.png");
+    editBtn.className = "bookmark-button";
+    editBtn.title = "Edit bookmark description";
+    editBtn.addEventListener("click", editBookmarkButtonEventHandler);
+    return editBtn;
+  }
+
+  //#endregion
 })();
 
 const getTime = (t) => {
@@ -262,52 +334,3 @@ const getTime = (t) => {
   date.setSeconds(t);
   return date.toISOString().slice(11, 19);
 };
-
-function everyTimePageLoads() {}
-
-function initializePlayerControls() {}
-
-function createBookmarkListItem(bookmarksParameters) {
-  const listItem = document.createElement("div");
-  listItem.className = "loop-list-item";
-  listItem.innerHTML = `
-    <input type="checkbox" name="" id="">
-    <p>${bookmarksParameters.time}<p>
-    <p>${bookmarksParameters.desc}<p>
-    `;
-  return listItem;
-}
-//#region CONTROL BUTTONS CREATION
-function createAddBookmarkButton() {
-  const bookmarkBtn = document.createElement("img");
-  bookmarkBtn.src = chrome.runtime.getURL("assets/book.png");
-  bookmarkBtn.className = "bookmark-button";
-  bookmarkBtn.title = "Add bookmark at current time";
-  bookmarkBtn.addEventListener("click", addNewBookmarkEventHandler);
-  return bookmarkBtn;
-}
-function createNextBookmarkButton() {
-  const nextBookmarkBtn = document.createElement("img");
-  nextBookmarkBtn.src = chrome.runtime.getURL("assets/b-next.png");
-  nextBookmarkBtn.className = "bookmark-button";
-  nextBookmarkBtn.title = "Go to next bookmark";
-  nextBookmarkBtn.addEventListener("click", nextBookmarkEventHandler);
-  return nextBookmarkBtn;
-}
-function createPrevBookmarkButton() {
-  const nextBookmarkBtn = document.createElement("img");
-  nextBookmarkBtn.src = chrome.runtime.getURL("assets/b-prev.png");
-  nextBookmarkBtn.className = "bookmark-button";
-  nextBookmarkBtn.title = "Go to previous bookmark";
-  nextBookmarkBtn.addEventListener("click", prevBookmarkEventHandler);
-  return nextBookmarkBtn;
-}
-function createLoopButton() {
-  const loopBtn = document.createElement("img");
-  loopBtn.src = chrome.runtime.getURL("assets/loop-icon.png");
-  loopBtn.className = "bookmark-button";
-  loopBtn.title = "Loop between two bookmarks";
-  loopBtn.addEventListener("click", loopBtnClickEventHandler);
-  return loopBtn;
-}
-//#endregion
