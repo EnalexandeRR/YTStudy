@@ -1,15 +1,21 @@
 let controlsContainer = null;
 let bookmarksContainer = null;
-let youtubePlayer;
+let youtubePlayer = null;
 let wasPlayingAd = false;
 let adCheckInterval = null;
 const minBookmarkInterval = 1;
 let video = null;
 
 (() => {
+  let testStartLoopTime = 0;
+  let testEndLoopTime = 0;
+  const testIsLooping = true;
+
   let currentVideo = "";
   let currentVideoBookmarks = [];
   let youtubeBottomContainer;
+  let allBookmarkElementsArray = [];
+  let loopStartAndFinishTimeArray = [];
 
   //LISTEN FOR COMMANDS FROM POPUP
   chrome.runtime.onMessage.addListener((obj, sender, response) => {
@@ -50,7 +56,7 @@ let video = null;
   const newVideoLoaded = async () => {
     currentVideoBookmarks = await fetchBookmarks();
     youtubePlayer = document.getElementsByClassName("video-stream")[0];
-
+    youtubePlayer.removeEventListener("playing", loopTimeCheck);
     if (bookmarksContainer) bookmarksContainer.innerHTML = "";
     youtubeBottomContainer = document.getElementsByClassName("ytp-chrome-bottom")[0];
     controlsContainerIsExist = document.getElementsByClassName("bookmark-controls-container")[0];
@@ -149,11 +155,13 @@ let video = null;
   };
   const loopBtnClickEventHandler = () => {
     if (!youtubePlayer.paused) youtubePlayer.pause();
+    youtubePlayer.removeEventListener("playing", loopTimeCheck);
     showLoopSelectionOverlay();
   };
 
   const editBookmarkButtonEventHandler = () => {};
 
+  const bookmarkCheckboxSelectionForLooping = () => {};
   //#endregion
 
   function generateAllBookmarks() {
@@ -202,7 +210,6 @@ let video = null;
       playerOverlay = document.createElement("div");
     }
     playerOverlay.className = "player-overlay";
-    playerOverlayParent.prepend(playerOverlay);
     playerOverlay.innerHTML = `
     <div class="modal-window">
       <div class="modal-header">
@@ -213,12 +220,30 @@ let video = null;
       </div>
       <div class="modal-footer">
         <input type="button" value="Close!" class="close-button">
+        <input type="button" value="Loop!" class="loop-button">
       </div>
     </div>`;
-    console.log(currentVideoBookmarks);
-    const sectionUl = document.querySelector(".bookmarks-list");
+    playerOverlayParent.prepend(playerOverlay);
+    const bookmarksList = document.querySelector(".bookmarks-list");
+    const loopButton = document.querySelector(".loop-button");
+    loopButton.addEventListener("click", () => {
+      if (loopStartAndFinishTimeArray.length < 2) {
+        console.log("Choose TWO bookmarks!");
+      } else {
+        playerOverlay.classList.add("hidden");
+        body.classList.remove("body-no-scroll");
+        testStartLoopTime = loopStartAndFinishTimeArray[0];
+        testEndLoopTime = loopStartAndFinishTimeArray[1];
+        youtubePlayer.currentTime = testStartLoopTime;
+        youtubePlayer.play();
+        youtubePlayer.addEventListener("playing", loopTimeCheck);
+      }
+    });
+    allBookmarkElementsArray = [];
     for (let i = 0; i < currentVideoBookmarks.length; i++) {
-      sectionUl.append(createBookmarkListItem(currentVideoBookmarks[i]));
+      const bookmark = createBookmarkListItem(currentVideoBookmarks[i]);
+      bookmarksList.append(bookmark);
+      allBookmarkElementsArray.push(bookmark);
     }
 
     document.querySelector(".close-button").addEventListener("click", () => {
@@ -269,6 +294,18 @@ let video = null;
   }
   //#endregion
 
+  //#region LOOP CHECKER
+  function loopTimeCheck() {
+    onLoopCheckInterval = setInterval(loopTimeChecker, 100);
+  }
+  function loopTimeChecker() {
+    console.log(youtubePlayer.currentTime);
+    if (youtubePlayer.currentTime >= testEndLoopTime) {
+      youtubePlayer.currentTime = testStartLoopTime;
+    }
+  }
+  //#endregion
+
   function toggleBookmarkPanel(display) {
     display ? controlsContainer.className.remove("hidden") : controlsContainer.className.add("hidden");
   }
@@ -276,12 +313,53 @@ let video = null;
   function createBookmarkListItem(bookmarksParameters) {
     const listItem = document.createElement("div");
     listItem.className = "loop-list-item";
-    listItem.innerHTML = `
-      <input type="checkbox" name="" id="">
-      <p>${bookmarksParameters.time}<p>
-      <p>${bookmarksParameters.desc}<p>
-      `;
+    listItem.innerHTML = `<p>${bookmarksParameters.time}</p>`;
+
+    const bookmarkChecker = document.createElement("input");
+    bookmarkChecker.setAttribute("type", "checkbox");
+    bookmarkChecker.setAttribute("id", bookmarksParameters.time);
+    listItem.addEventListener("click", (event) => {
+      tempProcessCheck(event, listItem);
+    });
+
+    listItem.prepend(bookmarkChecker);
     return listItem;
+  }
+
+  function tempProcessCheck(event, listItem) {
+    if (event.target.type === "checkbox") {
+    } else if (!listItem.childNodes[0].disabled) {
+      listItem.childNodes[0].checked = !listItem.childNodes[0].checked;
+    }
+    tempCheckForTwoBookmarks();
+  }
+
+  function tempCheckForTwoBookmarks() {
+    let checkedCount = 0;
+    loopStartAndFinishTimeArray = [];
+    for (let j = 0; j < allBookmarkElementsArray.length; j++) {
+      const element = allBookmarkElementsArray[j];
+      element.firstChild.disabled = false;
+    }
+    for (let i = 0; i < allBookmarkElementsArray.length; i++) {
+      const element = allBookmarkElementsArray[i];
+      if (element.firstChild.checked) {
+        loopStartAndFinishTimeArray.push(element.firstChild.id);
+        checkedCount++;
+        if (checkedCount === 2) {
+          for (let j = 0; j < allBookmarkElementsArray.length; j++) {
+            const element = allBookmarkElementsArray[j];
+            if (element.firstChild.checked) {
+              continue;
+            } else {
+              element.firstChild.disabled = true;
+            }
+          }
+          console.log(loopStartAndFinishTimeArray);
+          break;
+        }
+      }
+    }
   }
   //#region CONTROL BUTTONS CREATION
   function createAddBookmarkButton() {
@@ -316,7 +394,6 @@ let video = null;
     loopBtn.addEventListener("click", loopBtnClickEventHandler);
     return loopBtn;
   }
-
   function createEditBookmarkButton() {
     const editBtn = document.createElement("img");
     editBtn.src = chrome.runtime.getURL("assets/bm-edit.png");
