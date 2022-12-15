@@ -1,4 +1,5 @@
-let controlsContainer = null;
+const controlsContainer = document.createElement("div");
+const buttonsContainer = document.createElement("div");
 let bookmarksContainer = null;
 let youtubePlayer = null;
 let wasPlayingAd = false;
@@ -8,24 +9,24 @@ let onLoopCheckInterval = null;
 let video = null;
 
 (() => {
-  //#region sidebar test
-  testbody = document.getElementsByTagName("body")[0];
-  console.log(testbody);
-  sidebar = document.createElement("div");
-  sidebar.className = "sidebar";
-  sidebar.classList.add("closed");
-  sideDetector = document.createElement("div");
-  sideDetector.className = "side-detector";
-  sideDetector.addEventListener("mouseover", () => {
-    console.log("hover over side detector");
-    sidebar.classList.remove("closed");
-  });
-  sidebar.addEventListener("mouseleave", () => {
-    console.log("mouse leave side detector");
-    sidebar.classList.add("closed");
-  });
-  testbody.appendChild(sidebar);
-  testbody.appendChild(sideDetector);
+  //#region ******************************* SIDEBAR TEST
+  // testbody = document.getElementsByTagName("body")[0];
+  // console.log(testbody);
+  // sidebar = document.createElement("div");
+  // sidebar.className = "sidebar";
+  // sidebar.classList.add("closed");
+  // sideDetector = document.createElement("div");
+  // sideDetector.className = "side-detector";
+  // sideDetector.addEventListener("mouseover", () => {
+  //   console.log("hover over side detector");
+  //   sidebar.classList.remove("closed");
+  // });
+  // sidebar.addEventListener("mouseleave", () => {
+  //   console.log("mouse leave side detector");
+  //   sidebar.classList.add("closed");
+  // });
+  // testbody.appendChild(sidebar);
+  // testbody.appendChild(sideDetector);
 
   //#endregion
 
@@ -47,44 +48,35 @@ let video = null;
         currentVideo = videoId;
         newVideoLoaded();
         break;
-      case "PLAY_FROM_BOOKMARK":
-        jumpToTimeInPlayer(value);
-        break;
-      case "DELETE_BOOKMARK":
-        deleteBookmark(value);
-        response(currentVideoBookmarks);
-        break;
+      //#region ************************ DONT NEED FOR NOW
+      //   case "PLAY_FROM_BOOKMARK":
+      //     jumpToTimeInPlayer(value);
+      //     break;
+      //   case "DELETE_BOOKMARK":
+      //     deleteBookmark(value);
+      //     response(currentVideoBookmarks);
+      //     break;
+      //#endregion
     }
   });
 
-  const fetchBookmarks = () => {
-    return new Promise((resolve) => {
-      chrome.storage.sync.get([currentVideo], (obj) => {
-        resolve(obj[currentVideo] ? JSON.parse(obj[currentVideo]) : []);
-      });
-    });
-  };
-
-  // const fetchBookmarks = () => {
-  //   return new Promise((resolve) => {
-  //     chrome.storage.sync.get(null, (items) => {
-  //       let allKeys = Object.keys(items);
-  //       console.log(allKeys);
-  //       // resolve(obj[currentVideo] ? JSON.parse(obj[currentVideo]) : []);
-  //     });
-  //   });
-  // };
-
+  //ON NEW VIDEO PAGE LOADED
   const newVideoLoaded = async () => {
-    //GET BOOKMARKS FOR THIS VIDEO
-    currentVideoBookmarks = await fetchBookmarks();
-
+    youtubeBottomContainer = document.getElementsByClassName("ytp-chrome-bottom")[0];
     youtubePlayer = document.getElementsByClassName("video-stream")[0];
     youtubePlayer.removeEventListener("playing", loopTimeCheck);
+
     if (bookmarksContainer) bookmarksContainer.innerHTML = "";
-    youtubeBottomContainer = document.getElementsByClassName("ytp-chrome-bottom")[0];
     controlsContainerIsExist = document.getElementsByClassName("bookmark-controls-container")[0];
-    //#region ADS check, make later
+
+    if (!controlsContainerIsExist) {
+      createControlsContainer();
+    }
+    //GET BOOKMARKS AND GENERATE MARKS ON PANEL
+    currentVideoBookmarks = await fetchBookmarks();
+    generateAllBookmarks();
+
+    //#region *********************************** ADS check, make later
     //Ads check
     // adCheckInterval = setInterval(adChecker, 500);
     // youtubePlayer.addEventListener("playing", function () {
@@ -95,40 +87,34 @@ let video = null;
     // youtubePlayer.addEventListener("ended", clearAdCheckerInterval);
     // youtubePlayer.addEventListener("pause", clearAdCheckerInterval);
     //#endregion
-
-    if (!controlsContainerIsExist) {
-      controlsContainer = document.createElement("div");
-      controlsContainer.className = "bookmark-controls-container";
-
-      const buttonsContainer = document.createElement("div");
-      buttonsContainer.className = "buttons-container";
-
-      bookmarksContainer = document.createElement("div");
-      bookmarksContainer.className = "bookmarks-container";
-      bookmarksContainer.innerHTML = "";
-
-      const bookmarksBottom = document.createElement("div");
-      bookmarksBottom.className = "bookmark-controls-container-bottom";
-
-      controlsContainer.appendChild(buttonsContainer);
-      controlsContainer.appendChild(bookmarksContainer);
-      controlsContainer.appendChild(bookmarksBottom);
-
-      buttonsContainer.append(createAddBookmarkButton());
-      buttonsContainer.append(createPrevBookmarkButton());
-      buttonsContainer.append(createNextBookmarkButton());
-      buttonsContainer.append(createLoopButton());
-      buttonsContainer.append(createEditBookmarkButton());
-      buttonsContainer.append(createAddVideoToPlaylistButton());
-
-      youtubeBottomContainer.prepend(controlsContainer);
-    }
-
-    generateAllBookmarks();
     //TODO: how to callback to wait until ads is over
     // if (!isPlayingAd) {
     // }
   };
+  function createControlsContainer() {
+    controlsContainer.className = "bookmark-controls-container";
+    buttonsContainer.className = "buttons-container";
+
+    bookmarksContainer = document.createElement("div");
+    bookmarksContainer.className = "bookmarks-container";
+    bookmarksContainer.innerHTML = "";
+
+    const bookmarksBottom = document.createElement("div");
+    bookmarksBottom.className = "bookmark-controls-container-bottom";
+
+    controlsContainer.appendChild(buttonsContainer);
+    controlsContainer.appendChild(bookmarksContainer);
+    controlsContainer.appendChild(bookmarksBottom);
+
+    buttonsContainer.append(createAddBookmarkButton());
+    buttonsContainer.append(createPrevBookmarkButton());
+    buttonsContainer.append(createNextBookmarkButton());
+    buttonsContainer.append(createLoopButton());
+    buttonsContainer.append(createEditBookmarkButton());
+    buttonsContainer.append(createAddVideoToPlaylistButton());
+
+    youtubeBottomContainer.prepend(controlsContainer);
+  }
 
   //#region CONTROL BUTTONS EVENT HADLERS
   const addNewBookmarkEventHandler = () => {
@@ -307,12 +293,12 @@ let video = null;
   //#region ADS FUNCTIONS
   function adChecker() {
     if (isPlayingAd()) {
-      toggleBookmarkPanel(false);
+      viewBookmarkPanel(false);
       wasPlayingAd = true;
     } else {
       if (wasPlayingAd) {
         removePrevBookmarks();
-        toggleBookmarkPanel(true);
+        viewBookmarkPanel(true);
         wasPlayingAd = false;
       }
     }
@@ -351,7 +337,7 @@ let video = null;
   }
   //#endregion
 
-  function toggleBookmarkPanel(display) {
+  function viewBookmarkPanel(display) {
     display
       ? controlsContainer.className.remove("hidden")
       : controlsContainer.className.add("hidden");
@@ -471,6 +457,14 @@ let video = null;
   }
 
   //#endregion
+
+  const fetchBookmarks = () => {
+    return new Promise((resolve) => {
+      chrome.storage.sync.get([currentVideo], (obj) => {
+        resolve(obj[currentVideo] ? JSON.parse(obj[currentVideo]) : []);
+      });
+    });
+  };
 })();
 
 const getTime = (t) => {
