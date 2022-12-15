@@ -1,0 +1,51 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 62.5%;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+body {
+  margin: auto;
+  position: relative;
+  font-family: "Rubik", sans-serif;
+}
+
+h2 {
+  font-size: 2.4rem;
+  margin-bottom: 1.2rem;
+}
+
+.form {
+  position: relative;
+  gap: 1.2rem;
+  align-items: center;
+  padding: 2.4rem;
+  /* box-shadow: 0 0 4px 1px rgba(126, 126, 126, 0.221); */
+}
+
+.input {
+  margin-bottom: 1.8rem;
+  display: block;
+  border: none;
+  border-radius: 5px;
+  padding: 0.5rem;
+}
+
+.btn {
+  font-family: "Rubik", sans-serif;
+  padding: 0.5rem 1rem;
+}
+
+.input::placeholder {
+  font-family: "Rubik", sans-serif;
+}
+
+.input:focus {
+  outline: none;
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 0px 0px 1px, rgb(209, 213, 219) 0px 0px 0px 1px inset;
+}

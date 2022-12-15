@@ -4,9 +4,31 @@ let youtubePlayer = null;
 let wasPlayingAd = false;
 let adCheckInterval = null;
 const minBookmarkInterval = 1;
+let onLoopCheckInterval = null;
 let video = null;
 
 (() => {
+  //#region sidebar test
+  testbody = document.getElementsByTagName("body")[0];
+  console.log(testbody);
+  sidebar = document.createElement("div");
+  sidebar.className = "sidebar";
+  sidebar.classList.add("closed");
+  sideDetector = document.createElement("div");
+  sideDetector.className = "side-detector";
+  sideDetector.addEventListener("mouseover", () => {
+    console.log("hover over side detector");
+    sidebar.classList.remove("closed");
+  });
+  sidebar.addEventListener("mouseleave", () => {
+    console.log("mouse leave side detector");
+    sidebar.classList.add("closed");
+  });
+  testbody.appendChild(sidebar);
+  testbody.appendChild(sideDetector);
+
+  //#endregion
+
   let testStartLoopTime = 0;
   let testEndLoopTime = 0;
   const testIsLooping = true;
@@ -54,7 +76,9 @@ let video = null;
   // };
 
   const newVideoLoaded = async () => {
+    //GET BOOKMARKS FOR THIS VIDEO
     currentVideoBookmarks = await fetchBookmarks();
+
     youtubePlayer = document.getElementsByClassName("video-stream")[0];
     youtubePlayer.removeEventListener("playing", loopTimeCheck);
     if (bookmarksContainer) bookmarksContainer.innerHTML = "";
@@ -95,6 +119,7 @@ let video = null;
       buttonsContainer.append(createNextBookmarkButton());
       buttonsContainer.append(createLoopButton());
       buttonsContainer.append(createEditBookmarkButton());
+      buttonsContainer.append(createAddVideoToPlaylistButton());
 
       youtubeBottomContainer.prepend(controlsContainer);
     }
@@ -105,15 +130,15 @@ let video = null;
     // }
   };
 
-  const playVideoAtBookmark = (time) => {
-    youtubePlayer.currentTime = time;
-  };
   //#region CONTROL BUTTONS EVENT HADLERS
   const addNewBookmarkEventHandler = () => {
     const currentTime = youtubePlayer.currentTime;
     let canPlace = true;
     for (let i = 0; i < currentVideoBookmarks.length; i++) {
-      if (currentTime >= currentVideoBookmarks[i].time - minBookmarkInterval && currentTime <= currentVideoBookmarks[i].time + minBookmarkInterval) {
+      if (
+        currentTime >= currentVideoBookmarks[i].time - minBookmarkInterval &&
+        currentTime <= currentVideoBookmarks[i].time + minBookmarkInterval
+      ) {
         canPlace = false;
         break;
       }
@@ -133,7 +158,7 @@ let video = null;
       });
     }
   };
-  const nextBookmarkEventHandler = async () => {
+  const nextBookmarkEventHandler = () => {
     const currentTime = youtubePlayer.currentTime;
     for (let i = 0; i < currentVideoBookmarks.length; i++) {
       const element = currentVideoBookmarks[i];
@@ -143,7 +168,7 @@ let video = null;
       }
     }
   };
-  const prevBookmarkEventHandler = async () => {
+  const prevBookmarkEventHandler = () => {
     const currentTime = youtubePlayer.currentTime;
     for (let i = currentVideoBookmarks.length - 1; i >= 0; i--) {
       const element = currentVideoBookmarks[i];
@@ -156,10 +181,13 @@ let video = null;
   const loopBtnClickEventHandler = () => {
     if (!youtubePlayer.paused) youtubePlayer.pause();
     youtubePlayer.removeEventListener("playing", loopTimeCheck);
+    clearLoopingInterval();
     showLoopSelectionOverlay();
   };
 
   const editBookmarkButtonEventHandler = () => {};
+
+  const addCurrentVideoToPlaylistHandler = () => {};
 
   const bookmarkCheckboxSelectionForLooping = () => {};
   //#endregion
@@ -187,9 +215,14 @@ let video = null;
     bookmarkItem.title = `${description}`;
     bookmarkItem.addEventListener("click", () => {
       playVideoAtBookmark(time);
+      bookmarkItem.classList.add("selected");
     });
     return bookmarkItem;
   }
+
+  const playVideoAtBookmark = (time) => {
+    youtubePlayer.currentTime = time;
+  };
 
   function getVideoDuration() {
     if (youtubePlayer) {
@@ -200,11 +233,12 @@ let video = null;
   }
 
   function showLoopSelectionOverlay() {
+    const controlsLoopButton = document.querySelector(".start-loop-button");
     const playerOverlayParent = document.querySelector("ytd-app");
     const body = document.querySelector("body");
     let playerOverlay = null;
 
-    body.classList.add("body-no-scroll");
+    //body.classList.add("body-no-scroll");
     playerOverlay = document.querySelector(".player-overlay");
     if (!playerOverlay) {
       playerOverlay = document.createElement("div");
@@ -215,17 +249,15 @@ let video = null;
       <div class="modal-header">
       </div>
       <div class="modal-main">
-        <ul class="bookmarks-list">
-        </ul>
       </div>
       <div class="modal-footer">
-        <input type="button" value="Close!" class="close-button">
-        <input type="button" value="Loop!" class="loop-button">
+        <input type="button" value="Cancel" class="cancel-button">
+        <input type="button" value="Loop" class="list-loop-button" disabled>
       </div>
     </div>`;
     playerOverlayParent.prepend(playerOverlay);
-    const bookmarksList = document.querySelector(".bookmarks-list");
-    const loopButton = document.querySelector(".loop-button");
+    const bookmarksList = document.querySelector(".modal-main");
+    const loopButton = document.querySelector(".list-loop-button");
     loopButton.addEventListener("click", () => {
       if (loopStartAndFinishTimeArray.length < 2) {
         console.log("Choose TWO bookmarks!");
@@ -235,6 +267,9 @@ let video = null;
         testStartLoopTime = loopStartAndFinishTimeArray[0];
         testEndLoopTime = loopStartAndFinishTimeArray[1];
         youtubePlayer.currentTime = testStartLoopTime;
+
+        controlsLoopButton.classList.add("animate-loop-button");
+
         youtubePlayer.play();
         youtubePlayer.addEventListener("playing", loopTimeCheck);
       }
@@ -246,9 +281,11 @@ let video = null;
       allBookmarkElementsArray.push(bookmark);
     }
 
-    document.querySelector(".close-button").addEventListener("click", () => {
-      playerOverlay.classList.add("hidden");
+    document.querySelector(".cancel-button").addEventListener("click", () => {
+      controlsLoopButton.classList.remove("animate-loop-button");
+      youtubePlayer.removeEventListener("playing", loopTimeCheck);
       body.classList.remove("body-no-scroll");
+      playerOverlay.classList.add("hidden");
     });
   }
 
@@ -296,7 +333,9 @@ let video = null;
 
   //#region LOOP CHECKER
   function loopTimeCheck() {
-    onLoopCheckInterval = setInterval(loopTimeChecker, 100);
+    if (!onLoopCheckInterval) {
+      onLoopCheckInterval = setInterval(loopTimeChecker, 100);
+    }
   }
   function loopTimeChecker() {
     console.log(youtubePlayer.currentTime);
@@ -304,16 +343,30 @@ let video = null;
       youtubePlayer.currentTime = testStartLoopTime;
     }
   }
+  function clearLoopingInterval() {
+    if (onLoopCheckInterval) {
+      clearInterval(onLoopCheckInterval);
+      onLoopCheckInterval = null;
+    }
+  }
   //#endregion
 
   function toggleBookmarkPanel(display) {
-    display ? controlsContainer.className.remove("hidden") : controlsContainer.className.add("hidden");
+    display
+      ? controlsContainer.className.remove("hidden")
+      : controlsContainer.className.add("hidden");
   }
 
   function createBookmarkListItem(bookmarksParameters) {
     const listItem = document.createElement("div");
     listItem.className = "loop-list-item";
-    listItem.innerHTML = `<p>${bookmarksParameters.time}</p>`;
+    listItem.innerHTML = `
+    <div>
+      <p>${bookmarksParameters.time}</p>
+      <p>${bookmarksParameters.desc}</p>
+    </div>
+      `;
+    console.log(bookmarksParameters);
 
     const bookmarkChecker = document.createElement("input");
     bookmarkChecker.setAttribute("type", "checkbox");
@@ -327,14 +380,18 @@ let video = null;
   }
 
   function tempProcessCheck(event, listItem) {
+    let checkbox = listItem.childNodes[0];
     if (event.target.type === "checkbox") {
-    } else if (!listItem.childNodes[0].disabled) {
-      listItem.childNodes[0].checked = !listItem.childNodes[0].checked;
+    } else if (!checkbox.disabled) {
+      checkbox.checked = !checkbox.checked;
     }
     tempCheckForTwoBookmarks();
   }
 
   function tempCheckForTwoBookmarks() {
+    const loopButton = document.querySelector(".list-loop-button");
+    loopButton.disabled = true;
+
     let checkedCount = 0;
     loopStartAndFinishTimeArray = [];
     for (let j = 0; j < allBookmarkElementsArray.length; j++) {
@@ -355,6 +412,7 @@ let video = null;
               element.firstChild.disabled = true;
             }
           }
+          loopButton.disabled = false;
           console.log(loopStartAndFinishTimeArray);
           break;
         }
@@ -389,7 +447,7 @@ let video = null;
   function createLoopButton() {
     const loopBtn = document.createElement("img");
     loopBtn.src = chrome.runtime.getURL("assets/loop-icon.png");
-    loopBtn.className = "bookmark-button";
+    loopBtn.classList.add("bookmark-button", "start-loop-button");
     loopBtn.title = "Loop between two bookmarks";
     loopBtn.addEventListener("click", loopBtnClickEventHandler);
     return loopBtn;
@@ -401,6 +459,15 @@ let video = null;
     editBtn.title = "Edit bookmark description";
     editBtn.addEventListener("click", editBookmarkButtonEventHandler);
     return editBtn;
+  }
+
+  function createAddVideoToPlaylistButton() {
+    const addToPlaylistBtn = document.createElement("img");
+    addToPlaylistBtn.src = chrome.runtime.getURL("assets/add-to-playlist-icon.png");
+    addToPlaylistBtn.className = "bookmark-button";
+    addToPlaylistBtn.title = "Add current video to playlist";
+    addToPlaylistBtn.addEventListener("click", addCurrentVideoToPlaylistHandler);
+    return addToPlaylistBtn;
   }
 
   //#endregion

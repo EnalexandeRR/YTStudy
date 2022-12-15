@@ -17,15 +17,16 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "assets/book.png",
-        "assets/b-prev.png",
-        "assets/b-next.png",
-        "assets/loop-icon.png",
-        "assets/play.png",
-        "assets/delete.png",
-        "assets/save.png",
-        "assets/bookmark-item.png",
-        "assets/bm-edit.png"
+        "/assets/book.png",
+        "/assets/b-prev.png",
+        "/assets/b-next.png",
+        "/assets/loop-icon.png",
+        "/assets/play.png",
+        "/assets/delete.png",
+        "/assets/save.png",
+        "/assets/bookmark-item.png",
+        "/assets/bm-edit.png",
+        "/assets/add-to-playlist-icon.png"
       ],
       "matches": ["https://*.youtube.com/*"]
     }
@@ -37,7 +38,7 @@
       "32": "assets/ext-icon.png"
     },
     "default_title": "YT Study MINE!!!",
-    "default_popup": "popup.html"
+    "default_popup": "/test&ideas/auth-form.html"
   },
   "manifest_version": 3
 }
