@@ -182,7 +182,7 @@ let video = null;
     const videoDuration = getVideoDuration();
     if (videoDuration > 0) {
       currentVideoBookmarks.forEach((element) => {
-        bookmarksContainer.appendChild(createBookmark(element.time, element.desc));
+        bookmarksContainer.appendChild(createBookmark(element.time, element.desc, videoDuration));
       });
     } else {
       setTimeout(() => {
@@ -191,12 +191,13 @@ let video = null;
     }
   }
 
-  function createBookmark(time, description) {
-    const videoDuration = getVideoDuration();
+  function createBookmark(time, description, videoDuration) {
     const bookmarkItem = document.createElement("img");
     bookmarkItem.className = "bookmark-item";
     bookmarkItem.id = "bookmark_" + time;
-    bookmarkItem.style.left = `calc(${(time / videoDuration) * 100}% - 3px)`;
+    //3px is half of element width
+    // bookmarkItem.style.left = `calc(${(time / videoDuration) * 100}% - 3px)`;
+    bookmarkItem.style.left = `calc(${(time / videoDuration) * 100}%)`;
     bookmarkItem.src = chrome.runtime.getURL("assets/bookmark-item.png");
     bookmarkItem.title = `${description}`;
     bookmarkItem.addEventListener("click", () => {
@@ -326,6 +327,9 @@ let video = null;
   function loopTimeChecker() {
     console.log(youtubePlayer.currentTime);
     if (youtubePlayer.currentTime >= testEndLoopTime) {
+      youtubePlayer.currentTime = testStartLoopTime;
+    }
+    if (youtubePlayer.currentTime < testStartLoopTime) {
       youtubePlayer.currentTime = testStartLoopTime;
     }
   }
